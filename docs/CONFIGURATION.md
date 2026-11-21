@@ -10,7 +10,7 @@ Use `lsblk -f` or `blkid` to identify the filesystem UUID, then:
 sudo lydstore drives add --uuid 1234-ABCD --name Backup --admin arkadmin --fstype exfat
 ```
 
-The manager creates a systemd `.mount` and `.automount` pair at `/ark/Drives/Backup`. UUIDs are used instead of unstable kernel device names. exFAT, VFAT and NTFS-family filesystems receive UID/GID mount options and a restrictive group-accessible umask. Native Unix filesystems retain their on-disk ownership and ACLs; set the target directory ownership on the drive itself for the admin account. Removable media uses `nofail` and a short device timeout.
+The manager creates a systemd `.mount` and `.automount` pair at `/ark/Drives/Backup`. UUIDs are used instead of unstable kernel device names. exFAT, VFAT and NTFS-family filesystems receive UID/GID mount options and a restrictive group-accessible umask. Native Unix filesystems retain their on-disk ownership and ACLs, so the admin account must already have write permission on the mounted directory tree. The automount keeps an absent removable drive from blocking normal boot.
 
 ## rclone mounts
 
