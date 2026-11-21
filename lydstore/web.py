@@ -98,6 +98,13 @@ class RemoteRequest(BaseModel):
     target: str = Field(min_length=2, max_length=240)
     user: str = Field(min_length=1, max_length=64)
     config: str | None = Field(default=None, max_length=512)
+    @field_validator("target")
+    @classmethod
+    def safe_target(cls, value: str) -> str:
+        path = Path(value)
+        if not path.is_absolute() or ".." in path.parts or not path.is_relative_to(Path("/ark")):
+            raise ValueError("Remote mount locations must be absolute paths below /ark")
+        return value
     @field_validator("remote")
     @classmethod
     def safe_remote(cls, value: str) -> str:
@@ -114,6 +121,13 @@ class BackupRequest(BaseModel):
     schedule: Literal["hourly", "daily", "weekly", "monthly"] = "daily"
     mode: Literal["copy", "sync"] = "copy"
     confirm_sync: bool = False
+    @field_validator("source")
+    @classmethod
+    def safe_source(cls, value: str) -> str:
+        path = Path(value)
+        if not path.is_absolute() or ".." in path.parts:
+            raise ValueError("Backup source must be an absolute normalized path")
+        return value
     @field_validator("destination")
     @classmethod
     def safe_destination(cls, value: str) -> str:
