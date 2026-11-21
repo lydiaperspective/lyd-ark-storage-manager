@@ -1,5 +1,6 @@
 """Persistent lydstore configuration helpers."""
 from __future__ import annotations
+import grp
 import json
 import os
 from pathlib import Path
@@ -30,5 +31,12 @@ def save(data: dict) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     tmp = CONFIG_FILE.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(data, indent=2) + "\n")
-    os.chmod(tmp, 0o600)
+    os.chmod(tmp, 0o640)
+    try:
+        group = grp.getgrnam("ark")
+        os.chown(tmp, 0, group.gr_gid)
+        os.chown(CONFIG_DIR, 0, group.gr_gid)
+        os.chmod(CONFIG_DIR, 0o750)
+    except KeyError:
+        os.chmod(CONFIG_DIR, 0o700)
     os.replace(tmp, CONFIG_FILE)
