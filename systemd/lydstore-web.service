@@ -1,0 +1,33 @@
+[Unit]
+Description=Lyd Ark Storage Manager Web Interface
+Documentation=https://github.com/lydiaperspective/lyd-ark-storage-manager
+Wants=network-online.target
+After=network-online.target local-fs.target
+ConditionPathExists=/etc/lydstore/webui.json
+
+[Service]
+Type=simple
+User=root
+Group=root
+UMask=0077
+Environment=PYTHONUNBUFFERED=1
+Environment=LYDSTORE_WEB_HOST=127.0.0.1
+Environment=LYDSTORE_WEB_PORT=8765
+ExecStart=/usr/bin/python -m lydstore.web
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectHostname=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+ReadWritePaths=/etc/lydstore /etc/systemd/system /ark /orundum/ark /run/systemd
+
+[Install]
+WantedBy=multi-user.target
