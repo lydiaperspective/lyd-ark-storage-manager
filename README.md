@@ -50,6 +50,12 @@ Drive identity is persistent. Missing removable/network storage must not block b
 
 The layout migration stops running Podman containers for root and active rootless users, copies and verifies the shared /ark tree, replaces /ark with a symlink, and restarts only containers that were running. The old directory is retained as a rollback copy. Podman's private graphroots remain separate and are never moved by this operation.
 
+## Web interface
+
+Lyd Storage Manager includes a Wicca-themed web interface and a KDE launcher for local or remote instances. See [docs/WEB_UI.md](docs/WEB_UI.md) for credential setup, API security, folder relocation, and private remote access. The service listens on loopback only; remote use must be through a trusted HTTPS transport such as Tailscale Serve. Set credentials with `sudo lydstore webui set-password --username USER`, then start `lydstore-web.service`.
+
+The web API uses the same `lydstore` operations as the CLI. The desktop launcher offers this desktop or an HTTPS remote server. The API is designed to support a future native KDE client.
+
 ## Development
 
 Python 3.11+, systemd, rclone (for remote/backup commands), util-linux, ACL tools, and root privileges for system-wide configuration.
