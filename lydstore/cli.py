@@ -96,6 +96,9 @@ def main_run(argv=None):
     ws = webui.add_subparsers(dest="action", required=True)
     wp = ws.add_parser("set-password", help="Set or replace web interface credentials")
     wp.add_argument("--username", required=True)
+    setup = ws.add_parser("setup", help="Set web credentials and enable the web service")
+    setup.add_argument("--username", required=True)
+    ws.add_parser("tailscale", help="Publish the web interface privately with Tailscale Serve")
 
     ns = p.parse_args(argv)
     data = config.load()
@@ -109,7 +112,9 @@ def main_run(argv=None):
         move_folder(ns.name, ns.target, dry_run=ns.dry_run, confirmation=ns.confirm)
         return 0
 
-    if ns.area == "webui" and ns.action == "set-password":
+    if ns.area == "webui" and ns.action in ("set-password", "setup"):
+        if ns.action == "setup":
+            units.require_root()
         from .web_auth import set_credentials
         password = getpass.getpass("New Storage Manager password: ")
         confirmation = getpass.getpass("Confirm password: ")
@@ -119,6 +124,18 @@ def main_run(argv=None):
             raise ValueError("Password must be at least 14 characters")
         set_credentials(ns.username, password)
         print("Storage Manager web credentials saved. Keep the password private.")
+        if ns.action == "setup":
+            subprocess.run(["systemctl", "enable", "--now", "lydstore-web.service"], check=True)
+            print("Lyd Storage Manager web service is enabled and running at http://127.0.0.1:8765/")
+        return 0
+
+    if ns.area == "webui" and ns.action == "tailscale":
+        units.require_root()
+        tailscale = shutil.which("tailscale")
+        if not tailscale:
+            raise RuntimeError("Tailscale is not installed. Install and sign in to Tailscale first.")
+        subprocess.run([tailscale, "serve", "--bg", "http://127.0.0.1:8765"], check=True)
+        print("Tailscale Serve is configured. Use the HTTPS hostname reported by Tailscale for the desktop Remote option.")
         return 0
 
     if ns.area == "layout" and ns.action == "status":
