@@ -113,6 +113,9 @@ def main_run(argv=None):
         if any(x["name"] == ns.name for x in data["remotes"]): raise ValueError("Remote name already configured")
         if not shutil.which("rclone"): raise RuntimeError("Install rclone first")
         if not Path(cfg).is_file(): raise ValueError(f"rclone config not found: {cfg}; configure the remote as that user first")
+        fuse_conf = Path("/etc/fuse.conf")
+        if not fuse_conf.exists() or "user_allow_other" not in fuse_conf.read_text():
+            raise RuntimeError("Enable user_allow_other in /etc/fuse.conf before configuring rclone mounts")
         if not Path("/ark").is_symlink(): raise RuntimeError("Initialize the Ark layout first")
         target = Path(ns.target)
         if not target.is_absolute() or ".." in target.parts: raise ValueError("Mount target must be an absolute normalized path")
@@ -144,6 +147,7 @@ def main_run(argv=None):
         units.disable_remove([f"lydstore-backup-{ns.name}.timer",f"lydstore-backup-{ns.name}.service"])
         data["backups"].remove(b); config.save(data)
     elif ns.area == "backups" and ns.action == "run":
+        units.require_root()
         if not any(x["name"] == ns.name for x in data["backups"]): raise ValueError("Unknown backup")
         subprocess.run(["systemctl","start",f"lydstore-backup-{ns.name}.service"],check=True)
     return 0
