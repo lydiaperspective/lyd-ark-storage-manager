@@ -85,9 +85,19 @@ def main_run(argv=None):
         target = Path("/ark/Drives") / ns.name
         if not Path("/ark").is_symlink() or os.readlink("/ark") != "/orundum/ark": raise RuntimeError("Initialize the Ark layout first with lydstore layout init")
         target.mkdir(parents=True, exist_ok=True)
-        for unit, content in units.drive_units(d): units.write_unit(unit, content)
+        generated = units.drive_units(d)
+        for unit, content in generated: units.write_unit(unit, content)
+        units.reload_systemd()
+        if fs not in ("exfat", "vfat", "ntfs", "ntfs3", "fuseblk"):
+            mount_unit = generated[0][0]
+            try:
+                subprocess.run(["systemctl", "start", mount_unit], check=True)
+                subprocess.run(["setfacl", "-R", "-m", f"u:{uid}:rwX", str(target)], check=True)
+                subprocess.run(["find", str(target), "-type", "d", "-exec", "setfacl", "-m", f"d:u:{uid}:rwx", "{}", "+"], check=True)
+            finally:
+                subprocess.run(["systemctl", "stop", mount_unit], check=False)
         data["drives"].append(d); config.save(data); units.reload_systemd(); units.enable_now(units.systemd_escape(str(target), "automount"))
-        print(f"Configured {device} at {target}; systemd mounts it on first access.")
+        print(f"Configured {device} at {target}; admin write ACLs are prepared and systemd mounts it on first access.")
     elif ns.area == "drives" and ns.action == "remove":
         units.require_root(); d = next((x for x in data["drives"] if x["name"] == ns.name), None)
         if not d: raise ValueError("Unknown drive")
