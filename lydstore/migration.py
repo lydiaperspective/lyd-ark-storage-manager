@@ -69,6 +69,8 @@ def migrate_ark(dry_run: bool = False) -> Path | None:
         raise RuntimeError(f"/ark is already a symlink to {os.readlink(source)}")
     if not source.is_dir():
         raise RuntimeError("The existing /ark directory does not exist")
+    if destination.is_symlink():
+        raise RuntimeError("/orundum/ark must be a real directory, not a symlink")
     destination.mkdir(parents=True, exist_ok=True)
     for root, dirs, files in os.walk(destination):
         if files or any(Path(root, d).is_file() for d in dirs):
@@ -81,8 +83,9 @@ def migrate_ark(dry_run: bool = False) -> Path | None:
     stopped: list[tuple[str | None, list[str]]] = []
     try:
         for user, ids in contexts:
-            _run_podman(user, ["stop", "--time", "30", *ids])
-            stopped.append((user, ids))
+            for container_id in ids:
+                _run_podman(user, ["stop", "--time", "30", container_id])
+                stopped.append((user, [container_id]))
         subprocess.run(["rsync", "-aHAX", "--numeric-ids", f"{source}/", f"{destination}/"], check=True)
         verify = subprocess.run(
             ["rsync", "-aHAXn", "--checksum", "--delete", "--numeric-ids", "--itemize-changes",
