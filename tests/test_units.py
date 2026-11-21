@@ -9,6 +9,14 @@ class UnitTests(unittest.TestCase):
         self.assertIn("uid=1000,gid=1000,umask=0007", units[0][1])
         self.assertIn("WantedBy=multi-user.target", units[1][1])
 
+    def test_drive_mountpoint_is_configurable_under_ark(self):
+        generated = drive_units({"name":"Movies","uuid":"1234-ABCD","uid":1000,"gid":1000,"fstype":"ext4","mountpoint":"/ark/Media/Movies"})
+        self.assertIn("Where=/ark/Media/Movies", generated[0][1])
+
+    def test_drive_mountpoint_cannot_escape_ark(self):
+        with self.assertRaises(ValueError):
+            drive_units({"name":"Bad","uuid":"1234-ABCD","uid":1000,"gid":1000,"fstype":"ext4","mountpoint":"/etc"})
+
     def test_invalid_names_rejected(self):
         with self.assertRaises(ValueError): valid_name("../escape")
 
