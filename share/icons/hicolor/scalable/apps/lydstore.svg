@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<defs><linearGradient id="moon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d7c8e8"/><stop offset="1" stop-color="#9874c4"/></linearGradient></defs>
+<circle cx="64" cy="64" r="58" fill="#21152e"/>
+<path d="M79 20c-25 5-39 29-32 52 6 22 29 35 51 28-12 13-32 18-50 10C23 99 12 72 22 48 32 24 57 13 79 20Z" fill="url(#moon)" stroke="#b69a55" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="m87 30 3 8 8 3-8 3-3 8-3-8-8-3 8-3zM105 64l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#b69a55"/>
+<path d="M47 93c10 6 23 8 35 4" fill="none" stroke="#b69a55" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+</svg>
