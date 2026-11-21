@@ -30,15 +30,21 @@ def _container_contexts() -> list[tuple[str | None, list[str]]]:
         ids = _run_podman(None, ["ps", "-q"])
         if ids:
             contexts.append((None, ids))
-    for entry in pwd.getpwall():
-        if entry.pw_uid < 1000 or entry.pw_uid == 65534:
-            continue
-        store = Path(f"/orundum/users/{entry.pw_uid}/containers/storage")
-        if not store.exists():
-            continue
-        ids = _run_podman(entry.pw_name, ["ps", "-q"])
-        if ids:
-            contexts.append((entry.pw_name, ids))
+    users_root = Path("/orundum/users")
+    if users_root.is_dir():
+        for store_root in users_root.iterdir():
+            if not store_root.name.isdigit() or store_root.name == "0":
+                continue
+            try:
+                entry = pwd.getpwuid(int(store_root.name))
+            except KeyError:
+                raise RuntimeError(f"Cannot resolve owner for rootless Podman store {store_root}")
+            store = store_root / "containers/storage"
+            if not store.exists():
+                continue
+            ids = _run_podman(entry.pw_name, ["ps", "-q"])
+            if ids:
+                contexts.append((entry.pw_name, ids))
     return contexts
 
 
