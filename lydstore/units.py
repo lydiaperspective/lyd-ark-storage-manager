@@ -61,11 +61,11 @@ def drive_units(drive: dict) -> list[tuple[str, str]]:
     mount_unit = systemd_escape(where, "mount")
     auto_unit = systemd_escape(where, "automount")
     fs = drive.get("fstype", "auto")
-    options = drive.get("options", "defaults,nofail,x-systemd.device-timeout=5s")
+    options = drive.get("options", "defaults")
     uid, gid = int(drive["uid"]), int(drive["gid"])
     if fs in ("exfat", "vfat", "ntfs", "ntfs3"):
         options += f",uid={uid},gid={gid},umask=0007"
-    mount = (f"[Unit]\nDescription=Lyd Ark drive {name}\n\n[Mount]\nWhat=/dev/disk/by-uuid/{uuid}\n"
+    mount = (f"[Unit]\nDescription=Lyd Ark drive {name}\nJobTimeoutSec=5s\n\n[Mount]\nWhat=/dev/disk/by-uuid/{uuid}\n"
              f"Where={where}\nType={fs}\nOptions={options}\n")
     auto = (f"[Unit]\nDescription=Automount Lyd Ark drive {name}\n\n[Automount]\nWhere={where}\n"
             f"TimeoutIdleSec=300\n\n[Install]\nWantedBy=multi-user.target\n")
@@ -84,7 +84,7 @@ def rclone_service(remote: dict) -> tuple[str, str]:
                f"After=network-online.target\n\n[Service]\nType=simple\nUser={user}\n"
                f"ExecStart=/usr/bin/rclone mount {remote['remote']} {target} --config {config} "
                "--allow-other --vfs-cache-mode writes --dir-cache-time 5m\n"
-               "ExecStop=/bin/fusermount3 -u %h\nRestart=on-failure\nRestartSec=15s\n"
+               "ExecStop=/usr/bin/fusermount3 -u {target}\nRestart=on-failure\nRestartSec=15s\n"
                "TimeoutStopSec=30s\n\n[Install]\nWantedBy=multi-user.target\n")
     return unit, content
 
