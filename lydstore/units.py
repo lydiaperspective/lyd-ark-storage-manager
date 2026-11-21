@@ -25,6 +25,11 @@ def systemd_escape(path: str, suffix: str) -> str:
     return subprocess.check_output(["systemd-escape", "--path", "--suffix", suffix, path], text=True).strip()
 
 
+def systemd_arg(value: str) -> str:
+    value = str(value).replace("%", "%%").replace("\\", "\\\\").replace('"', '\\"')
+    return '"' + value + '"'
+
+
 def write_unit(name: str, content: str) -> Path:
     require_root()
     UNIT_DIR.mkdir(parents=True, exist_ok=True)
@@ -44,9 +49,9 @@ def enable_now(unit: str):
     subprocess.run(["systemctl", "enable", "--now", unit], check=True)
 
 
-def disable_remove(units: list[str]):
+def disable_remove(names: list[str]):
     require_root()
-    for unit in units:
+    for unit in names:
         subprocess.run(["systemctl", "disable", "--now", unit], check=False)
         (UNIT_DIR / unit).unlink(missing_ok=True)
     reload_systemd()
@@ -63,29 +68,28 @@ def drive_units(drive: dict) -> list[tuple[str, str]]:
     fs = drive.get("fstype", "auto")
     options = drive.get("options", "defaults")
     uid, gid = int(drive["uid"]), int(drive["gid"])
-    if fs in ("exfat", "vfat", "ntfs", "ntfs3"):
+    if fs in ("exfat", "vfat", "ntfs", "ntfs3", "fuseblk"):
         options += f",uid={uid},gid={gid},umask=0007"
-    mount = (f"[Unit]\nDescription=Lyd Ark drive {name}\nJobTimeoutSec=5s\n\n[Mount]\nWhat=/dev/disk/by-uuid/{uuid}\n"
-             f"Where={where}\nType={fs}\nOptions={options}\n")
+    mount = (f"[Unit]\nDescription=Lyd Ark drive {name}\nJobTimeoutSec=5s\n\n[Mount]\n"
+             f"What=/dev/disk/by-uuid/{uuid}\nWhere={where}\nType={fs}\nOptions={options}\n")
     auto = (f"[Unit]\nDescription=Automount Lyd Ark drive {name}\n\n[Automount]\nWhere={where}\n"
-            f"TimeoutIdleSec=300\n\n[Install]\nWantedBy=multi-user.target\n")
+            "TimeoutIdleSec=300\n\n[Install]\nWantedBy=multi-user.target\n")
     return [(mount_unit, mount), (auto_unit, auto)]
 
 
 def rclone_service(remote: dict) -> tuple[str, str]:
     name = valid_name(remote["name"])
-    user = remote["user"]
-    target = remote["target"]
+    user, target, config = remote["user"], remote["target"], remote["config"]
     if not target.startswith("/") or ".." in Path(target).parts:
         raise ValueError("Remote mount target must be an absolute safe path")
-    config = remote["config"]
     unit = f"lydstore-rclone-{name}.service"
     content = (f"[Unit]\nDescription=Lyd Ark rclone mount {name}\nWants=network-online.target\n"
                f"After=network-online.target\n\n[Service]\nType=simple\nUser={user}\n"
-               f"ExecStart=/usr/bin/rclone mount {remote['remote']} {target} --config {config} "
-               "--allow-other --vfs-cache-mode writes --dir-cache-time 5m\n"
-               "ExecStop=/usr/bin/fusermount3 -u {target}\nRestart=on-failure\nRestartSec=15s\n"
-               "TimeoutStopSec=30s\n\n[Install]\nWantedBy=multi-user.target\n")
+               f"ExecStart=/usr/bin/rclone mount {systemd_arg(remote['remote'])} {systemd_arg(target)} "
+               f"--config {systemd_arg(config)} --allow-other --vfs-cache-mode writes --dir-cache-time 5m\n"
+               f"ExecStop=/usr/bin/fusermount3 -u {systemd_arg(target)}\n"
+               "Restart=on-failure\nRestartSec=15s\nTimeoutStopSec=30s\n"
+               "\n[Install]\nWantedBy=multi-user.target\n")
     return unit, content
 
 
@@ -100,14 +104,13 @@ def backup_units(backup: dict) -> list[tuple[str, str]]:
     mode = backup.get("mode", "copy")
     if mode not in ("copy", "sync"):
         raise ValueError("Backup mode must be copy or sync")
-    # copy is the safe default; sync can delete destination files and is opt-in.
-    service = f"lydstore-backup-{name}.service"
-    timer = f"lydstore-backup-{name}.timer"
+    service, timer = f"lydstore-backup-{name}.service", f"lydstore-backup-{name}.timer"
     svc = (f"[Unit]\nDescription=Lyd Ark backup {name}\n\n[Service]\nType=oneshot\nUser={user}\n"
-           f"ExecStart=/usr/bin/rclone {mode} {source} {destination} --create-empty-src-dirs\n")
+           f"ExecStart=/usr/bin/rclone {mode} {systemd_arg(source)} {systemd_arg(destination)} "
+           f"--create-empty-src-dirs --config {systemd_arg(backup['config'])}\n")
     schedule = backup.get("schedule", "daily")
     if schedule not in ("hourly", "daily", "weekly", "monthly"):
         raise ValueError("Schedule must be hourly, daily, weekly or monthly")
     tmr = (f"[Unit]\nDescription=Schedule Lyd Ark backup {name}\n\n[Timer]\nOnCalendar={schedule}\n"
-           "Persistent=true\nUnit=" + service + "\n\n[Install]\nWantedBy=timers.target\n")
+           f"Persistent=true\nUnit={service}\n\n[Install]\nWantedBy=timers.target\n")
     return [(service, svc), (timer, tmr)]
