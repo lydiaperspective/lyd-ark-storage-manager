@@ -83,6 +83,15 @@ def main_run(argv=None):
     br = backups.add_parser("remove"); br.add_argument("name")
     bx = backups.add_parser("run"); bx.add_argument("name")
     backups.add_parser("restore").add_argument("name")
+    folders = sub.add_parser("folders", help="Manage standard Ark folder locations")
+    fs = folders.add_subparsers(dest="action", required=True)
+    fs.add_parser("list")
+    fm = fs.add_parser("move", help="Relocate a standard folder to a mounted drive")
+    fm.add_argument("--name", required=True, choices=["Containers", "Media", "Share", "Configs"])
+    fm.add_argument("--target", required=True)
+    fm.add_argument("--dry-run", action="store_true")
+    fm.add_argument("--confirm")
+
     webui = sub.add_parser("webui", help="Manage the Storage Manager web interface")
     ws = webui.add_subparsers(dest="action", required=True)
     wp = ws.add_parser("set-password", help="Set or replace web interface credentials")
@@ -90,6 +99,15 @@ def main_run(argv=None):
 
     ns = p.parse_args(argv)
     data = config.load()
+
+    if ns.area == "folders" and ns.action == "list":
+        from .folders import list_folders
+        for name, location in list_folders(): print(f"{name}: {location}")
+        return 0
+    if ns.area == "folders" and ns.action == "move":
+        from .folders import move_folder
+        move_folder(ns.name, ns.target, dry_run=ns.dry_run, confirmation=ns.confirm)
+        return 0
 
     if ns.area == "webui" and ns.action == "set-password":
         from .web_auth import set_credentials
