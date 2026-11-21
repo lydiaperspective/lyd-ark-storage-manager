@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from . import config, units
+from . import config, units, migration
 
 
 def identity(name):
@@ -46,6 +46,7 @@ def main_run(argv=None):
     ls = layout.add_subparsers(dest="action", required=True)
     ls.add_parser("status")
     li = ls.add_parser("init"); li.add_argument("--admin", required=True)
+    ls.add_parser("migrate", help="Stop containers and migrate /ark data to /orundum/ark")
     drives = sub.add_parser("drives", help="Manage SATA/USB automounts").add_subparsers(dest="action", required=True)
     drives.add_parser("list")
     da = drives.add_parser("add"); da.add_argument("--uuid", required=True); da.add_argument("--name", required=True); da.add_argument("--admin", required=True); da.add_argument("--fstype", default="auto"); da.add_argument("--options", default="defaults")
@@ -70,6 +71,9 @@ def main_run(argv=None):
             print(f"  {folder}: {'present' if (root/folder).exists() else 'missing'}")
     elif ns.area == "layout" and ns.action == "init":
         init_layout(ns.admin)
+    elif ns.area == "layout" and ns.action == "migrate":
+        backup = migration.migrate_ark()
+        print(f"Moved /ark data to /orundum/ark; original data retained at {backup}. Previously running containers were restarted.")
     elif ns.area == "drives" and ns.action == "list":
         for d in data["drives"]: print(f"{d['name']}: UUID={d['uuid']} -> /ark/Drives/{d['name']} ({d['admin']})")
     elif ns.area == "drives" and ns.action == "add":
