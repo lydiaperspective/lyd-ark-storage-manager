@@ -66,7 +66,7 @@ class HelpOnErrorParser(argparse.ArgumentParser):
 
     def error(self, message):
         self.print_help(file=sys.stderr)
-        self.exit(2, f"{self.prog}: error: {message}\\n")
+        self.exit(2, f"{self.prog}: error: {message}\n")
 
 
 def main_run(argv=None):
