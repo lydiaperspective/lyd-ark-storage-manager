@@ -6,6 +6,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, Field, field_validator
 import uvicorn
@@ -14,6 +15,7 @@ from .web_auth import credentials_configured, verify_credentials
 APP_DIR = Path(__file__).resolve().parent / "webui"
 security = HTTPBasic(auto_error=False)
 app = FastAPI(title="Lyd Storage Manager", docs_url=None, redoc_url=None, openapi_url=None)
+app.mount("/static", StaticFiles(directory=APP_DIR), name="static")
 
 def authenticate(credentials: HTTPBasicCredentials | None = Depends(security)) -> str:
     if not credentials_configured():
@@ -184,11 +186,14 @@ def add_backup(request: BackupRequest, _: str = Depends(authenticate)):
 def remove_backup(name: str, _: str = Depends(authenticate)):
     return {"output": run_cli("backups", "remove", name, timeout=180)}
 
+class RestoreRequest(BaseModel):
+    confirmation: str | None = None
+
 @app.post("/api/v1/backups/{name}/{action}")
-def run_backup(name: str, action: Literal["run", "restore"], _: str = Depends(authenticate)):
-    if action == "restore":
-        raise HTTPException(status_code=400, detail="Restore is CLI-only in this initial release; review the destination before restoring")
-    return {"output": run_cli("backups", "run", name, timeout=1800)}
+def run_backup(name: str, action: Literal["run", "restore"], request: RestoreRequest, _: str = Depends(authenticate)):
+    if action == "restore" and request.confirmation != "RESTORE":
+        raise HTTPException(status_code=400, detail="Restoring requires the exact confirmation word RESTORE")
+    return {"output": run_cli("backups", action, name, timeout=1800)}
 
 def main() -> None:
     import argparse
