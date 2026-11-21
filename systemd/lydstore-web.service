@@ -21,11 +21,9 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
-ProtectControlGroups=true
 ProtectHostname=true
 LockPersonality=true
 RestrictRealtime=true
-RestrictSUIDSGID=true
 SystemCallArchitectures=native
 ReadWritePaths=/etc/lydstore /etc/systemd/system /ark /orundum/ark /run/systemd
 
