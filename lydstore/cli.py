@@ -147,8 +147,7 @@ def main_run(argv=None):
         if not Path("/ark").is_symlink(): raise RuntimeError("Initialize the Ark layout first")
         target = Path(ns.target)
         validate_mountpoint(target)
-        if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]) or any(x["target"] == str(target) for x in data["remotes"]):
-            raise ValueError("Mountpoint is already configured")
+        ensure_unique_mountpoint(target, data)
         target.mkdir(parents=True, exist_ok=True)
         uid, gid, _ = identity(ns.user); os.chown(target, uid, gid)
         r = {"name":units.valid_name(ns.name),"remote":ns.remote,"target":str(target),"user":ns.user,"config":cfg}
