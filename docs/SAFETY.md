@@ -8,4 +8,6 @@
 - rclone network mounts start after network-online and restart after failures; a missing network must not prevent the rest of the system from booting.
 - Backups default to `rclone copy`. `sync` is opt-in because it can delete destination-only data.
 - Rootless Podman graphroots remain per-user under `/orundum/users/<uid>/containers/storage`. Shared persistent container data belongs under `/ark/Containers`.
-- Moving existing Podman graphroots is not performed by this initial command set. A future migration command must snapshot running-container state across users, stop all affected containers, copy with numeric ownership/xattrs/ACLs/hardlinks, validate storage metadata, switch configuration atomically, and restart only containers that were running before migration. It must support rollback and dry-run.
+- `lydstore layout migrate --dry-run` reports the planned migration without stopping containers or changing paths.
+- The applying migration discovers running rootful and active rootless Podman containers, stops them, copies shared `/ark` data with numeric ownership, xattrs, ACLs and hardlinks, verifies the copy, replaces `/ark` with a symlink, and restarts only the containers that were previously running.
+- The original `/ark` directory is retained as a rollback copy. Rootless Podman graphroots under `/orundum/users/<uid>/containers/storage` are deliberately not moved.
