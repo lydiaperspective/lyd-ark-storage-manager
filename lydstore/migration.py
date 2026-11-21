@@ -53,7 +53,7 @@ def _restart(contexts: list[tuple[str | None, list[str]]]) -> None:
         raise RuntimeError("Some previously running containers could not be restarted: " + "; ".join(errors))
 
 
-def migrate_ark() -> Path:
+def migrate_ark(dry_run: bool = False) -> Path | None:
     if os.geteuid() != 0:
         raise PermissionError("Run the storage migration with sudo")
     source, destination = Path("/ark"), Path("/orundum/ark")
@@ -68,6 +68,10 @@ def migrate_ark() -> Path:
         if files or any(Path(root, d).is_file() for d in dirs):
             raise RuntimeError("/orundum/ark already contains data; refusing to merge two storage trees")
     contexts = _container_contexts()
+    if dry_run:
+        count = sum(len(ids) for _, ids in contexts)
+        print(f"DRY RUN: would stop {count} running containers, copy {source} to {destination}, verify the copy, replace /ark with a symlink, then restart those containers.")
+        return None
     stopped: list[tuple[str | None, list[str]]] = []
     try:
         for user, ids in contexts:
