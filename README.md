@@ -16,6 +16,8 @@ Rootless Podman's private graphroots remain separate at `/orundum/users/<uid>/co
 Initialize the standard directory layout once the admin account exists:
 
 ```sh
+sudo lydstore layout migrate --dry-run
+sudo lydstore layout migrate
 sudo lydstore layout init --admin ADMIN_USER
 ```
 
@@ -45,7 +47,7 @@ Use `lydstore --help` for the full command tree.
 
 Drive identity is persistent. Missing removable/network storage must not block boot. rclone credentials remain in the configured user's rclone config and are not copied into systemd unit files. Backups default to non-destructive `rclone copy`; mirror/delete behavior requires explicitly selecting `--mode sync`.
 
-Moving existing Podman graphroots is not performed by the initial command set. It requires a separate state-aware migration with container discovery across users, stop/copy/verify/switch/restart handling and rollback. Do not manually move an active Podman graphroot.
+The layout migration stops running Podman containers for root and active rootless users, copies and verifies the shared /ark tree, replaces /ark with a symlink, and restarts only containers that were running. The old directory is retained as a rollback copy. Podman's private graphroots remain separate and are never moved by this operation.
 
 ## Development
 
