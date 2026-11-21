@@ -49,7 +49,7 @@ def main_run(argv=None):
     lm = ls.add_parser("migrate", help="Stop containers and migrate /ark data to /orundum/ark"); lm.add_argument("--dry-run", action="store_true")
     drives = sub.add_parser("drives", help="Manage SATA/USB automounts").add_subparsers(dest="action", required=True)
     drives.add_parser("list")
-    da = drives.add_parser("add"); da.add_argument("--uuid", required=True); da.add_argument("--name", required=True); da.add_argument("--admin", required=True); da.add_argument("--fstype", default="auto"); da.add_argument("--options", default="defaults")
+    da = drives.add_parser("add"); da.add_argument("--uuid", required=True); da.add_argument("--name", required=True); da.add_argument("--admin", required=True); da.add_argument("--mountpoint"); da.add_argument("--fstype", default="auto"); da.add_argument("--options", default="defaults")
     dr = drives.add_parser("remove"); dr.add_argument("name")
     remotes = sub.add_parser("remotes", help="Manage rclone network mounts").add_subparsers(dest="action", required=True)
     remotes.add_parser("list")
@@ -76,7 +76,7 @@ def main_run(argv=None):
         backup = migration.migrate_ark(dry_run=ns.dry_run)
         if not ns.dry_run: print(f"Moved /ark data to /orundum/ark; original data retained at {backup}. Previously running containers were restarted.")
     elif ns.area == "drives" and ns.action == "list":
-        for d in data["drives"]: print(f"{d['name']}: UUID={d['uuid']} -> /ark/Drives/{d['name']} ({d['admin']})")
+        for d in data["drives"]: print(f"{d['name']}: UUID={d['uuid']} -> {d.get('mountpoint', '/ark/Drives/' + d['name'])} ({d['admin']})")
     elif ns.area == "drives" and ns.action == "add":
         units.require_root()
         uid, gid, _ = identity(ns.admin)
@@ -86,8 +86,12 @@ def main_run(argv=None):
         fs = ns.fstype
         if fs == "auto":
             fs = subprocess.check_output(["blkid", "-o", "value", "-s", "TYPE", str(device)], text=True).strip()
-        d = {"name":units.valid_name(ns.name),"uuid":ns.uuid,"admin":ns.admin,"uid":uid,"gid":gid,"fstype":fs,"options":ns.options}
-        target = Path("/ark/Drives") / ns.name
+        target = Path(ns.mountpoint) if ns.mountpoint else Path("/ark/Drives") / ns.name
+        if not target.is_absolute() or ".." in target.parts or not str(target).startswith("/ark/"):
+            raise ValueError("Mountpoint must be an absolute path below /ark")
+        if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]):
+            raise ValueError("Mountpoint is already configured")
+        d = {"name":units.valid_name(ns.name),"uuid":ns.uuid,"admin":ns.admin,"uid":uid,"gid":gid,"fstype":fs,"options":ns.options,"mountpoint":str(target)}
         if not Path("/ark").is_symlink() or os.readlink("/ark") != "/orundum/ark": raise RuntimeError("Initialize the Ark layout first with lydstore layout init")
         target.mkdir(parents=True, exist_ok=True)
         generated = units.drive_units(d)
@@ -106,7 +110,7 @@ def main_run(argv=None):
     elif ns.area == "drives" and ns.action == "remove":
         units.require_root(); d = next((x for x in data["drives"] if x["name"] == ns.name), None)
         if not d: raise ValueError("Unknown drive")
-        target = f"/ark/Drives/{ns.name}"
+        target = d.get("mountpoint", f"/ark/Drives/{ns.name}")
         units.disable_remove([units.systemd_escape(target,"automount"), units.systemd_escape(target,"mount")])
         data["drives"].remove(d); config.save(data)
     elif ns.area == "remotes" and ns.action == "list":
