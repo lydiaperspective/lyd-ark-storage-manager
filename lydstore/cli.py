@@ -1,6 +1,7 @@
 """Command-line interface for lydstore."""
 from __future__ import annotations
 import argparse
+import getpass
 import grp
 import os
 import pwd
@@ -82,8 +83,25 @@ def main_run(argv=None):
     br = backups.add_parser("remove"); br.add_argument("name")
     bx = backups.add_parser("run"); bx.add_argument("name")
     backups.add_parser("restore").add_argument("name")
+    webui = sub.add_parser("webui", help="Manage the Storage Manager web interface")
+    ws = webui.add_subparsers(dest="action", required=True)
+    wp = ws.add_parser("set-password", help="Set or replace web interface credentials")
+    wp.add_argument("--username", required=True)
+
     ns = p.parse_args(argv)
     data = config.load()
+
+    if ns.area == "webui" and ns.action == "set-password":
+        from .web_auth import set_credentials
+        password = getpass.getpass("New Storage Manager password: ")
+        confirmation = getpass.getpass("Confirm password: ")
+        if password != confirmation:
+            raise ValueError("Passwords do not match")
+        if len(password) < 14:
+            raise ValueError("Password must be at least 14 characters")
+        set_credentials(ns.username, password)
+        print("Storage Manager web credentials saved. Keep the password private.")
+        return 0
 
     if ns.area == "layout" and ns.action == "status":
         root, link = Path("/orundum/ark"), Path("/ark")
