@@ -62,7 +62,9 @@ def drive_units(drive: dict) -> list[tuple[str, str]]:
     uuid = drive["uuid"]
     if not UUID_RE.fullmatch(uuid):
         raise ValueError("UUID does not look valid")
-    where = f"/ark/Drives/{name}"
+    where = drive.get("mountpoint", f"/ark/Drives/{name}")
+    if not where.startswith("/ark/") or ".." in Path(where).parts:
+        raise ValueError("Local drive mountpoints must be safe paths below /ark")
     mount_unit = systemd_escape(where, "mount")
     auto_unit = systemd_escape(where, "automount")
     fs = drive.get("fstype", "auto")
