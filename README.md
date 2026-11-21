@@ -39,6 +39,7 @@ Schedule a backup:
 ```sh
 sudo lydstore backups add --name ark-share --source /ark/Share --destination gdrive:ArkBackups/Share --user ADMIN_USER --schedule daily
 sudo lydstore backups run ark-share
+sudo lydstore backups restore ark-share
 ```
 
 Use `lydstore --help` for the full command tree.
