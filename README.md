@@ -52,7 +52,7 @@ The layout migration stops running Podman containers for root and active rootles
 
 ## Web interface
 
-Lyd Storage Manager includes a Wicca-themed web interface and a KDE launcher for local or remote instances. See [docs/WEB_UI.md](docs/WEB_UI.md) for credential setup, API security, folder relocation, and private remote access. The service listens on loopback only; remote use must be through a trusted HTTPS transport such as Tailscale Serve. Set credentials with `sudo lydstore webui set-password --username USER`, then start `lydstore-web.service`.
+Lyd Storage Manager includes a Wicca-themed web interface and a KDE launcher for local or remote instances. See [docs/WEB_UI.md](docs/WEB_UI.md) for credential setup, API security, folder relocation, and private remote access. The service listens on loopback only; remote use must be through a trusted HTTPS transport such as Tailscale Serve. Run `sudo lydstore webui setup --username USER` to set the web login and enable the service. For optional private remote access, run `sudo lydstore webui tailscale` after Tailscale is installed and signed in.
 
 The web API uses the same `lydstore` operations as the CLI. The desktop launcher offers this desktop or an HTTPS remote server. The API is designed to support a future native KDE client.
 
