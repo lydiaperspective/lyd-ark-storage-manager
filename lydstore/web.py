@@ -63,6 +63,12 @@ def parse_items(output: str) -> list[dict[str, str]]:
             items.append({"name": name, "details": details})
     return items
 
+class FolderMoveRequest(BaseModel):
+    name: Literal["Containers", "Media", "Share", "Configs"]
+    target: str = Field(min_length=2, max_length=240)
+    dry_run: bool = True
+    confirmation: str | None = None
+
 class MigrationRequest(BaseModel):
     dry_run: bool = True
     confirmation: str | None = None
@@ -124,10 +130,11 @@ def status(_: str = Depends(authenticate)):
     drives = run_cli("drives", "list")
     remotes = run_cli("remotes", "list")
     backups = run_cli("backups", "list")
+    folders = run_cli("folders", "list")
     failed = subprocess.run(["systemctl", "--failed", "--no-legend", "--plain"],
         text=True, capture_output=True, timeout=10, check=False)
     return {"layout": parse_lines(layout), "drives": parse_items(drives),
-            "remotes": parse_items(remotes), "backups": parse_items(backups),
+            "remotes": parse_items(remotes), "backups": parse_items(backups), "folders": parse_items(folders),
             "failed_units": parse_lines(failed.stdout)}
 
 @app.get("/api/v1/devices")
@@ -142,6 +149,17 @@ def devices(_: str = Depends(authenticate)):
 def users(_: str = Depends(authenticate)):
     return [{"username": a.pw_name, "home": a.pw_dir} for a in pwd.getpwall()
             if 1000 <= a.pw_uid < 60000 and a.pw_dir.startswith("/home/")]
+
+@app.post("/api/v1/folders/move")
+def move_folder(request: FolderMoveRequest, _: str = Depends(authenticate)):
+    if not request.dry_run and request.confirmation != "MOVE":
+        raise HTTPException(status_code=400, detail="Applying folder relocation requires confirmation MOVE")
+    args = ["folders", "move", "--name", request.name, "--target", request.target]
+    if request.dry_run:
+        args.append("--dry-run")
+    else:
+        args += ["--confirm", "MOVE"]
+    return {"output": run_cli(*args, timeout=1800), "dry_run": request.dry_run}
 
 @app.post("/api/v1/layout/migrate")
 def migrate(request: MigrationRequest, _: str = Depends(authenticate)):
