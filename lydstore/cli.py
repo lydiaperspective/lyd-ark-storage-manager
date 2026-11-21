@@ -87,7 +87,7 @@ def run(args=None):
         if not b: raise ValueError("Unknown backup")
         units.disable_remove([f"lydstore-backup-{ns.name}.timer",f"lydstore-backup-{ns.name}.service"]); data["backups"].remove(b); config.save(data)
     elif ns.area == "backups" and ns.action == "run":
-        b=next((x for x for x in data["backups"] if x["name"]==ns.name),None)
+        b=next((x for x in data["backups"] if x["name"]==ns.name),None)
         if not b: raise ValueError("Unknown backup")
         subprocess.run(["systemctl","start",f"lydstore-backup-{ns.name}.service"],check=True)
     return 0
