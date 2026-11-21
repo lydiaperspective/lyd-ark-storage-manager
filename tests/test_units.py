@@ -16,6 +16,12 @@ class UnitTests(unittest.TestCase):
         units = backup_units({"name":"daily","user":"admin","source":"/ark/Share","destination":"gdrive:Backup","config":"/home/admin/.config/rclone/rclone.conf"})
         self.assertIn("rclone copy", units[0][1])
 
+    def test_restore_is_copy_back_to_original_source(self):
+        generated = backup_units({"name":"daily","user":"admin","source":"/ark/Share","destination":"gdrive:Backup","config":"/home/admin/.config/rclone/rclone.conf"})
+        restore = next(content for name, content in generated if name.endswith("restore-daily.service"))
+        self.assertIn("rclone copy", restore)
+        self.assertIn('"gdrive:Backup" "/ark/Share"', restore)
+
     def test_sync_is_explicit(self):
         units = backup_units({"name":"mirror","user":"admin","source":"/ark/Share","destination":"gdrive:Backup","config":"/home/admin/.config/rclone/rclone.conf","mode":"sync"})
         self.assertIn("rclone sync", units[0][1])
