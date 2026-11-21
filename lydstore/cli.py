@@ -60,6 +60,7 @@ def main_run(argv=None):
     ba = backups.add_parser("add"); ba.add_argument("--name", required=True); ba.add_argument("--source", required=True); ba.add_argument("--destination", required=True); ba.add_argument("--user", required=True); ba.add_argument("--config"); ba.add_argument("--schedule", choices=["hourly","daily","weekly","monthly"], default="daily"); ba.add_argument("--mode", choices=["copy","sync"], default="copy")
     br = backups.add_parser("remove"); br.add_argument("name")
     bx = backups.add_parser("run"); bx.add_argument("name")
+    backups.add_parser("restore").add_argument("name")
     ns = p.parse_args(argv)
     data = config.load()
 
@@ -148,12 +149,13 @@ def main_run(argv=None):
     elif ns.area == "backups" and ns.action == "remove":
         units.require_root(); b = next((x for x in data["backups"] if x["name"] == ns.name), None)
         if not b: raise ValueError("Unknown backup")
-        units.disable_remove([f"lydstore-backup-{ns.name}.timer",f"lydstore-backup-{ns.name}.service"])
+        units.disable_remove([f"lydstore-backup-{ns.name}.timer",f"lydstore-backup-{ns.name}.service",f"lydstore-restore-{ns.name}.service"])
         data["backups"].remove(b); config.save(data)
-    elif ns.area == "backups" and ns.action == "run":
+    elif ns.area == "backups" and ns.action in ("run", "restore"):
         units.require_root()
         if not any(x["name"] == ns.name for x in data["backups"]): raise ValueError("Unknown backup")
-        subprocess.run(["systemctl","start",f"lydstore-backup-{ns.name}.service"],check=True)
+        action = "backup" if ns.action == "run" else "restore"
+        subprocess.run(["systemctl","start",f"lydstore-{action}-{ns.name}.service"],check=True)
     return 0
 
 
