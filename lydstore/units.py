@@ -116,7 +116,7 @@ def backup_units(backup: dict) -> list[tuple[str, str]]:
     tmr = (f"[Unit]\nDescription=Schedule Lyd Ark backup {name}\n\n[Timer]\nOnCalendar={schedule}\n"
            f"Persistent=true\nUnit={service}\n\n[Install]\nWantedBy=timers.target\n")
     restore = f"lydstore-restore-{name}.service"
-    restore_svc = (f"[Unit]\\nDescription=Restore Lyd Ark backup {name}\\n\\n[Service]\\nType=oneshot\\nUser={user}\\n"
+    restore_svc = (f"[Unit]\nDescription=Restore Lyd Ark backup {name}\n\n[Service]\nType=oneshot\nUser={user}\n"
                    f"ExecStart=/usr/bin/rclone copy {systemd_arg(destination)} {systemd_arg(source)} "
-                   f"--create-empty-src-dirs --config {systemd_arg(backup['config'])}\\n")
+                   f"--create-empty-src-dirs --config {systemd_arg(backup['config'])}\n")
     return [(service, svc), (timer, tmr), (restore, restore_svc)]

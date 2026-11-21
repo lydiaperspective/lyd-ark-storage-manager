@@ -4,12 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lyd-ark-storage-manager"
-version = "0.1.0"
-description = "Lyd Ark storage, automount, rclone and backup manager"
+version = "0.2.0"
+description = "Lyd Ark storage, automount, rclone, backup and web manager"
 requires-python = ">=3.11"
+dependencies = ["fastapi>=0.115", "uvicorn>=0.30"]
 
 [project.scripts]
 lydstore = "lydstore.cli:main"
+lydstore-ui = "lydstore.launcher:main"
 
 [tool.setuptools.packages.find]
 include = ["lydstore*"]
+
+[tool.setuptools.package-data]
+lydstore = ["webui/*.html", "webui/*.css", "webui/*.js", "webui/*.svg"]
+
+[tool.setuptools.data-files]
+"lib/systemd/system" = ["systemd/lydstore-web.service"]
+"share/applications" = ["share/applications/org.lydark.LydStore.desktop"]
+"share/icons/hicolor/scalable/apps" = ["share/icons/hicolor/scalable/apps/lydstore.svg"]

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Lyd Storage Manager
+GenericName=Storage Management
+Comment=Manage local and remote Lyd Ark storage
+Exec=lydstore-ui
+Icon=lydstore
+Terminal=false
+Categories=System;Settings;
+StartupNotify=true

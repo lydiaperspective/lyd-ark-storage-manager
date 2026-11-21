@@ -29,6 +29,8 @@ class UnitTests(unittest.TestCase):
         restore = next(content for name, content in generated if name.endswith("restore-daily.service"))
         self.assertIn("rclone copy", restore)
         self.assertIn('"gdrive:Backup" "/ark/Share"', restore)
+        self.assertIn("\n[Service]\n", restore)
+        self.assertNotIn("\\n", restore)
 
     def test_sync_is_explicit(self):
         units = backup_units({"name":"mirror","user":"admin","source":"/ark/Share","destination":"gdrive:Backup","config":"/home/admin/.config/rclone/rclone.conf","mode":"sync"})
