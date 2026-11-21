@@ -61,30 +61,38 @@ def init_layout(admin):
     print(f"Initialized {root}; /ark -> {root}. Added {admin} (uid {uid}) to group ark; log out and back in for group changes.")
 
 
+class HelpOnErrorParser(argparse.ArgumentParser):
+    """Show the relevant command help whenever argument parsing fails."""
+
+    def error(self, message):
+        self.print_help(file=sys.stderr)
+        self.exit(2, f"{self.prog}: error: {message}\\n")
+
+
 def main_run(argv=None):
-    p = argparse.ArgumentParser(prog="lydstore", description="Lyd Ark storage manager")
-    sub = p.add_subparsers(dest="area", required=True)
+    p = HelpOnErrorParser(prog="lydstore", description="Lyd Ark storage manager")
+    sub = p.add_subparsers(dest="area", required=True, parser_class=HelpOnErrorParser)
     layout = sub.add_parser("layout", help="Manage standardized Ark storage")
-    ls = layout.add_subparsers(dest="action", required=True)
+    ls = layout.add_subparsers(dest="action", required=True, parser_class=HelpOnErrorParser)
     ls.add_parser("status")
     li = ls.add_parser("init"); li.add_argument("--admin", required=True)
     lm = ls.add_parser("migrate", help="Stop containers and migrate /ark data to /orundum/ark"); lm.add_argument("--dry-run", action="store_true")
-    drives = sub.add_parser("drives", help="Manage SATA/USB automounts").add_subparsers(dest="action", required=True)
+    drives = sub.add_parser("drives", help="Manage SATA/USB automounts").add_subparsers(dest="action", required=True, parser_class=HelpOnErrorParser)
     drives.add_parser("list")
     da = drives.add_parser("add"); da.add_argument("--uuid", required=True); da.add_argument("--name", required=True); da.add_argument("--admin", required=True); da.add_argument("--mountpoint"); da.add_argument("--fstype", default="auto"); da.add_argument("--options", default="defaults")
     dr = drives.add_parser("remove"); dr.add_argument("name")
-    remotes = sub.add_parser("remotes", help="Manage rclone network mounts").add_subparsers(dest="action", required=True)
+    remotes = sub.add_parser("remotes", help="Manage rclone network mounts").add_subparsers(dest="action", required=True, parser_class=HelpOnErrorParser)
     remotes.add_parser("list")
     ra = remotes.add_parser("add"); ra.add_argument("--name", required=True); ra.add_argument("--remote", required=True); ra.add_argument("--target", required=True); ra.add_argument("--user", required=True); ra.add_argument("--config")
     rr = remotes.add_parser("remove"); rr.add_argument("name")
-    backups = sub.add_parser("backups", help="Manage scheduled rclone backups").add_subparsers(dest="action", required=True)
+    backups = sub.add_parser("backups", help="Manage scheduled rclone backups").add_subparsers(dest="action", required=True, parser_class=HelpOnErrorParser)
     backups.add_parser("list")
     ba = backups.add_parser("add"); ba.add_argument("--name", required=True); ba.add_argument("--source", required=True); ba.add_argument("--destination", required=True); ba.add_argument("--user", required=True); ba.add_argument("--config"); ba.add_argument("--schedule", choices=["hourly","daily","weekly","monthly"], default="daily"); ba.add_argument("--mode", choices=["copy","sync"], default="copy")
     br = backups.add_parser("remove"); br.add_argument("name")
     bx = backups.add_parser("run"); bx.add_argument("name")
     backups.add_parser("restore").add_argument("name")
     folders = sub.add_parser("folders", help="Manage standard Ark folder locations")
-    fs = folders.add_subparsers(dest="action", required=True)
+    fs = folders.add_subparsers(dest="action", required=True, parser_class=HelpOnErrorParser)
     fs.add_parser("list")
     fm = fs.add_parser("move", help="Relocate a standard folder to a mounted drive")
     fm.add_argument("--name", required=True, choices=["Containers", "Media", "Share", "Configs"])
@@ -93,14 +101,32 @@ def main_run(argv=None):
     fm.add_argument("--confirm")
 
     webui = sub.add_parser("webui", help="Manage the Storage Manager web interface")
-    ws = webui.add_subparsers(dest="action", required=True)
+    ws = webui.add_subparsers(dest="action", required=True, parser_class=HelpOnErrorParser)
     wp = ws.add_parser("set-password", help="Set or replace web interface credentials")
     wp.add_argument("--username", required=True)
     setup = ws.add_parser("setup", help="Set web credentials and enable the web service")
     setup.add_argument("--username", required=True)
     ws.add_parser("tailscale", help="Publish the web interface privately with Tailscale Serve")
 
+    help_parser = sub.add_parser("help", help="Show help for lydstore or a specific command")
+    help_parser.add_argument("command", nargs="*", help="Optional command path, e.g. webui setup")
+
     ns = p.parse_args(argv)
+    if ns.area == "help":
+        target = p
+        for part in ns.command:
+            children = next(
+                (action for action in target._actions if isinstance(action, argparse._SubParsersAction)),
+                None,
+            )
+            if children is None or part not in children.choices:
+                print(f"lydstore: unknown help topic: {part}", file=sys.stderr)
+                target.print_help(file=sys.stderr)
+                return 2
+            target = children.choices[part]
+        target.print_help()
+        return 0
+
     data = config.load()
 
     if ns.area == "folders" and ns.action == "list":
