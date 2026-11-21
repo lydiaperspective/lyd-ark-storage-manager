@@ -16,6 +16,19 @@ def identity(name):
     return p.pw_uid, p.pw_gid, p.pw_dir
 
 
+def validate_mountpoint(target: Path, base: Path | None = None):
+    if not target.is_absolute() or ".." in target.parts:
+        raise ValueError("Mountpoint must be an absolute normalized path")
+    if base is not None:
+        resolved_base = base.resolve()
+        if not target.resolve(strict=False).is_relative_to(resolved_base):
+            raise ValueError("Mountpoint must remain inside the standardized /ark tree")
+    if target.exists() and any(target.iterdir()):
+        raise ValueError(f"Mountpoint {target} is not empty; refusing to hide existing files")
+    if os.path.ismount(target):
+        raise ValueError(f"Mountpoint {target} is already mounted")
+
+
 def init_layout(admin):
     units.require_root()
     root, link = Path("/orundum/ark"), Path("/ark")
@@ -87,8 +100,7 @@ def main_run(argv=None):
         if fs == "auto":
             fs = subprocess.check_output(["blkid", "-o", "value", "-s", "TYPE", str(device)], text=True).strip()
         target = Path(ns.mountpoint) if ns.mountpoint else Path("/ark/Drives") / ns.name
-        if not target.is_absolute() or ".." in target.parts or not str(target).startswith("/ark/"):
-            raise ValueError("Mountpoint must be an absolute path below /ark")
+        validate_mountpoint(target, Path("/ark"))
         if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]) or any(x["target"] == str(target) for x in data["remotes"]):
             raise ValueError("Mountpoint is already configured")
         d = {"name":units.valid_name(ns.name),"uuid":ns.uuid,"admin":ns.admin,"uid":uid,"gid":gid,"fstype":fs,"options":ns.options,"mountpoint":str(target)}
@@ -127,7 +139,7 @@ def main_run(argv=None):
             raise RuntimeError("Enable user_allow_other in /etc/fuse.conf before configuring rclone mounts")
         if not Path("/ark").is_symlink(): raise RuntimeError("Initialize the Ark layout first")
         target = Path(ns.target)
-        if not target.is_absolute() or ".." in target.parts: raise ValueError("Mount target must be an absolute normalized path")
+        validate_mountpoint(target)
         if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]) or any(x["target"] == str(target) for x in data["remotes"]):
             raise ValueError("Mountpoint is already configured")
         target.mkdir(parents=True, exist_ok=True)
