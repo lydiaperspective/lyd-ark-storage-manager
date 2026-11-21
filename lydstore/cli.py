@@ -29,6 +29,14 @@ def validate_mountpoint(target: Path, base: Path | None = None):
         raise ValueError(f"Mountpoint {target} is already mounted")
 
 
+def ensure_unique_mountpoint(target: Path, data: dict):
+    configured = [Path(x.get("mountpoint", f"/ark/Drives/{x['name']}")) for x in data["drives"]]
+    configured += [Path(x["target"]) for x in data["remotes"]]
+    for current in configured:
+        if target == current or target in current.parents or current in target.parents:
+            raise ValueError(f"Mountpoint {target} overlaps existing mount {current}")
+
+
 def init_layout(admin):
     units.require_root()
     root, link = Path("/orundum/ark"), Path("/ark")
@@ -101,8 +109,7 @@ def main_run(argv=None):
             fs = subprocess.check_output(["blkid", "-o", "value", "-s", "TYPE", str(device)], text=True).strip()
         target = Path(ns.mountpoint) if ns.mountpoint else Path("/ark/Drives") / ns.name
         validate_mountpoint(target, Path("/ark"))
-        if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]) or any(x["target"] == str(target) for x in data["remotes"]):
-            raise ValueError("Mountpoint is already configured")
+        ensure_unique_mountpoint(target, data)
         d = {"name":units.valid_name(ns.name),"uuid":ns.uuid,"admin":ns.admin,"uid":uid,"gid":gid,"fstype":fs,"options":ns.options,"mountpoint":str(target)}
         if not Path("/ark").is_symlink() or os.readlink("/ark") != "/orundum/ark": raise RuntimeError("Initialize the Ark layout first with lydstore layout init")
         target.mkdir(parents=True, exist_ok=True)
