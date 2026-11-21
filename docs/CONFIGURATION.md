@@ -27,9 +27,10 @@ This creates a system service started at boot after network-online. The service 
 ```sh
 sudo lydstore backups add --name ark-share --source /ark/Share --destination gdrive:ArkBackups/Share --user arkadmin --schedule daily
 sudo lydstore backups run ark-share
+sudo lydstore backups restore ark-share
 ```
 
-Backups use `rclone copy` by default, which does not delete destination-only files. `--mode sync` is an explicit mirror mode and can delete destination files; use it only when that is intended. Schedules are hourly, daily, weekly or monthly systemd timers. Inspect execution with `systemctl status lydstore-backup-ark-share.service` and `journalctl -u lydstore-backup-ark-share.service`.
+Backups use `rclone copy` by default, which does not delete destination-only files. `--mode sync` is an explicit mirror mode and can delete destination files; use it only when that is intended. Schedules are hourly, daily, weekly or monthly systemd timers. Restore copies the remote backup back into the original source directory without deleting local-only files. Inspect execution with `systemctl status lydstore-backup-ark-share.service` and `journalctl -u lydstore-backup-ark-share.service`.
 
 ## Commands
 
