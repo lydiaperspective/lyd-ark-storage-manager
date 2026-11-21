@@ -42,7 +42,7 @@ sudo lydstore backups run ark-share
 sudo lydstore backups restore ark-share
 ```
 
-Use `lydstore --help` for the full command tree.
+Use `lydstore --help` or `lydstore help` to list available commands. Show detailed help for a command with `lydstore help webui` or `lydstore help webui setup`. If a command or option is invalid, `lydstore` prints the relevant help automatically.
 
 ## Safety model
 
