@@ -7,9 +7,10 @@ The web interface is a client for the existing lydstore operations. The CLI rema
 Set a dedicated web-interface username and password:
 
 ~~~sh
-sudo lydstore webui set-password --username storage-admin
-sudo systemctl enable --now lydstore-web.service
+sudo lydstore webui setup --username storage-admin
 ~~~
+
+This guided command prompts for the password twice, saves the salted password hash, and enables and starts `lydstore-web.service`. Use a dedicated username and a password of at least 14 characters.
 
 Passwords must be at least 14 characters. The password is stored as a salted scrypt hash in /etc/lydstore/webui.json, mode 0600.
 
@@ -20,13 +21,15 @@ Open the local interface at http://127.0.0.1:8765/.
 The recommended remote-access path is a private Tailscale network. It avoids exposing the privileged storage API or opening an internet-facing port.
 
 1. Install and authenticate Tailscale on the server and each client that needs access.
-2. On the server, publish the loopback service through Tailscale Serve:
+2. On the server, run the optional setup command:
 
    ~~~sh
-   sudo tailscale serve --bg http://127.0.0.1:8765
+   sudo lydstore webui tailscale
    ~~~
 
-3. Use the HTTPS hostname shown by Tailscale Serve in the desktop launcher's Remote option.
+   This runs Tailscale Serve against the loopback-only web service. Tailscale must already be installed and signed in.
+
+3. Use the HTTPS hostname reported by Tailscale Serve in the desktop launcher's Remote option.
 4. Keep the Storage Manager username and password private. Tailscale access controls and the web login are separate layers.
 
 Tailscale CLI syntax and Serve availability can vary by installed version. Check tailscale serve --help if the command differs. Do not expose port 8765 directly to the internet.
