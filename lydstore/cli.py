@@ -89,7 +89,7 @@ def main_run(argv=None):
         target = Path(ns.mountpoint) if ns.mountpoint else Path("/ark/Drives") / ns.name
         if not target.is_absolute() or ".." in target.parts or not str(target).startswith("/ark/"):
             raise ValueError("Mountpoint must be an absolute path below /ark")
-        if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]):
+        if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]) or any(x["target"] == str(target) for x in data["remotes"]):
             raise ValueError("Mountpoint is already configured")
         d = {"name":units.valid_name(ns.name),"uuid":ns.uuid,"admin":ns.admin,"uid":uid,"gid":gid,"fstype":fs,"options":ns.options,"mountpoint":str(target)}
         if not Path("/ark").is_symlink() or os.readlink("/ark") != "/orundum/ark": raise RuntimeError("Initialize the Ark layout first with lydstore layout init")
@@ -128,6 +128,8 @@ def main_run(argv=None):
         if not Path("/ark").is_symlink(): raise RuntimeError("Initialize the Ark layout first")
         target = Path(ns.target)
         if not target.is_absolute() or ".." in target.parts: raise ValueError("Mount target must be an absolute normalized path")
+        if any(x.get("mountpoint", f"/ark/Drives/{x['name']}") == str(target) for x in data["drives"]) or any(x["target"] == str(target) for x in data["remotes"]):
+            raise ValueError("Mountpoint is already configured")
         target.mkdir(parents=True, exist_ok=True)
         uid, gid, _ = identity(ns.user); os.chown(target, uid, gid)
         r = {"name":units.valid_name(ns.name),"remote":ns.remote,"target":str(target),"user":ns.user,"config":cfg}
