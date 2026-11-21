@@ -13,11 +13,11 @@ class UnitTests(unittest.TestCase):
         with self.assertRaises(ValueError): valid_name("../escape")
 
     def test_backup_defaults_to_copy(self):
-        units = backup_units({"name":"daily","user":"admin","source":"/ark/Share","destination":"gdrive:Backup"})
+        units = backup_units({"name":"daily","user":"admin","source":"/ark/Share","destination":"gdrive:Backup","config":"/home/admin/.config/rclone/rclone.conf"})
         self.assertIn("rclone copy", units[0][1])
 
     def test_sync_is_explicit(self):
-        units = backup_units({"name":"mirror","user":"admin","source":"/ark/Share","destination":"gdrive:Backup","mode":"sync"})
+        units = backup_units({"name":"mirror","user":"admin","source":"/ark/Share","destination":"gdrive:Backup","config":"/home/admin/.config/rclone/rclone.conf","mode":"sync"})
         self.assertIn("rclone sync", units[0][1])
 
 if __name__ == "__main__": unittest.main()
